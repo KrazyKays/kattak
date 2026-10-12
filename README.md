@@ -74,5 +74,5 @@ Le build statique est généré dans `dist/`.
 
 GitHub Actions construit et déploie automatiquement le projet à chaque mise à jour de `main`.
 
-- Pour un dépôt de projet, Vite utilise `/kprj/` comme chemin de base dans GitHub Actions.
+- Pour un dépôt de projet, Vite utilise `/kattak/` comme chemin de base dans GitHub Actions.
 - Pour un domaine personnalisé, définir `VITE_BASE_PATH=/` dans l’environnement du workflow.
