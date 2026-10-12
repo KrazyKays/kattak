@@ -11,63 +11,7 @@ Les priorités ci-dessous privilégient d'abord les améliorations compatibles
 avec la progression actuelle, puis les fonctionnalités qui élargissent les
 mécaniques ou demandent des choix de conception.
 
-1. **Invocation individuelle ou groupée** — Implémenté. Le joueur peut
-   invoquer un seul compagnon ou dépenser les ressources disponibles au coût
-   croissant pour effectuer autant d'invocations que possible, dans la limite
-   des compagnons encore améliorables.
-2. **Aperçu des compagnons et de leurs bonus** — Implémenté. Les bonus de
-   chaque niveau, le niveau actuel et le prochain niveau sont visibles dans le
-   panneau de recrutement. Garder l'affichage lisible à côté de la future
-   distinction entre ressources ordinaires, ressources à effet immédiat et
-   monnaies alternatives.
-3. **Tutoriel intégré léger** — Implémenté : indications non bloquantes sur le
-   déplacement, la première collecte et l'invocation. Chaque étape avance après
-   l'action correspondante, le tutoriel peut être masqué et ne couvre pas les
-   futures ressources ou actions, qui pourront ajouter leurs propres indications.
-4. **Compagnons créant des ressources à effet actif** — Implémenté avec le
-   Crabe trou noir : il fait apparaître un jeton aspirant par niveau (jusqu'à
-   trois). Récupérer un jeton absorbe les trois pépites les plus
-   proches, même à distance, crédite celles qui sont disponibles et fait
-   réapparaître le jeton après six secondes.
-5. **Ressources alternatives pour d'autres actions** — l'obtention d'un
-   compagnon spécifique débloque l'apparition d'un type de ressource alternatif ;
-   la quantité de ces ressources dépend proportionnellement au niveau de ce
-   compagnon. Les relier aux actions qu'elles permettent et définir les actions,
-   leurs coûts, les règles d'apparition, de collecte et d'affichage. À coordonner
-   avec les ressources spéciales déclenchant un effet immédiat pour distinguer
-   clairement ces effets des monnaies dépensables.
-6. **Historique visuel des actions** — afficher les événements récents (par
-   exemple invocation et utilisation d'une action, mais pas les collectes
-   ordinaires) dans un encart distinct. Implémenté avec un historique éphémère
-   des cinq dernières invocations ; intégrer les futures actions lorsqu'elles
-   seront ajoutées.
-7. **Obstacles et arènes alternatives** — Implémenté pour la configuration
-   de base avec 4 murs éparpillés entravant les trajectoires directes, gérant
-   la collision et le glissement le long des parois, le recalage des
-   destinations et l'apparition des ressources hors des obstacles. Permettre
-   ultérieurement de choisir entre plusieurs configurations ou géométries
-   d'arène.
-8. **Fragments (ressource secondaire) et moyen de les obtenir** — Implémenté :
-   la ressource « fragment » (compteur dans le panneau « Butin », dépensable
-   dans le panneau « Actions ») est distincte des pépites. La Pie glaneuse
-   (rare) fait apparaître 2/4/6 fragments dans l'arène selon son niveau ; chacun
-   ramassé rapporte 1 fragment et réapparaît après 8 s. Reste à équilibrer la
-   rareté et d'éventuelles autres sources. À coordonner avec l'item 5 pour
-   garder lisibles les types de ressources.
-9. **Action : supprimer un mur** — Implémenté (remplace l'ancienne « traversée
-   de murs ») : dans le panneau « Actions », le bouton coûte 10 fragments et
-   supprime immédiatement un mur tiré au hasard ; l'action apparaît dans
-   l'historique. Ensuite : décider si le coût doit évoluer et si une arène doit
-   pouvoir restaurer ses murs.
-9 bis. **Action : invocation automatique** — Implémenté : à débloquer
-   une fois pour 20 fragments, puis bascule activable/désactivable ; tant
-   qu'elle est active, les invocations sont achetées dès que les pépites
-   suffisent et marquées « automatiquement » dans l'historique.
-9 ter. **Panneaux** — Les boutons d'invocation sont dans « Actions » (jaune des
-   pépites quand utilisables ; vert des fragments pour les actions payées en
-   fragments). Le panneau « Compagnons » a une liste défilante pour rester dans
-   l'écran.
-10. **Action : prestige des compagnons** — Permettre au joueur de dépenser des
+1. **Action : prestige des compagnons** — Permettre au joueur de dépenser des
     fragments (item 8) pour « prestiger » un compagnon : le remettre
     au niveau 0 en échange d'un bonus permanent améliorant ses statistiques
     au-delà du plafond actuel de niveau 3 (par exemple +X % supplémentaire par
