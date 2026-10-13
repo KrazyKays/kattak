@@ -21,6 +21,12 @@ mécaniques ou demandent des choix de conception.
     l'équilibre : le prestige doit offrir un gain net sur la durée malgré le
     retour au niveau 0.
 
+2. **Pop up d'invocation** — à chaque invocation, faire apparaittre une popup, qui permet de mettre en avant la rareté du compagnon invoqué, et son nom au minimum, pendant quelques secondes seulement.
+
+3. **Sauvegarde local** — Utiliser localStorage pour sauvegarder la progression du joueur.
+
+4. **Mur stoppeurs** — Entrer en contact avec un mur stop le déplacement du joueur. Avec un léger repoussement du mur afin que le joueur puisse faire un autre déplacement sans rester bloqué, collé au mur.
+
 ## Format suggéré
 
 - **Idée** — description courte, objectif ou bénéfice attendu, contraintes ou
