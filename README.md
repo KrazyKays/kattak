@@ -64,6 +64,18 @@ Le panneau **Prestige** apparaît dès la première couronne en vue. À partir d
 
 Les bonus de départ (Héritage, Nid de pie) sont aussi crédités immédiatement à l’achat.
 
+## Succès et chrono
+
+L’onglet **Succès** liste 28 succès répartis en cinq catégories (Découverte, Compagnons, Richesse, Prestige, Défis). Les objectifs chiffrés affichent une jauge de progression ; chaque succès obtenu indique le temps de jeu auquel il a été débloqué. Une notification apparaît en haut de l’arène à chaque déblocage.
+
+Les défis se valident au moment d’un prestige :
+
+- **Éclair :** prestige moins de 3 minutes de jeu après le début de la partie.
+- **Ascète :** prestige sans avoir invoqué de compagnon pendant la partie.
+- **Forteresse :** prestige sans avoir supprimé de mur pendant la partie.
+
+Le **chrono** (⏱ dans l’en-tête) mesure le temps de jeu depuis la première commande dans l’arène. Il est sauvegardé, se met en pause quand la page est masquée (le jeu l’est aussi) et s’arrête définitivement à 100 % des succès pour afficher le temps final : de quoi tenter des speedruns. « Recommencer de zéro » remet le chrono à zéro.
+
 ## Interface
 
 L’arène conserve un format carré. Sur grand écran, les panneaux de ressources, d’actions, de prestige et d’historique sont disposés à côté de l’arène. Sur téléphone, ils passent en dessous.

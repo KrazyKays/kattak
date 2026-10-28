@@ -154,6 +154,17 @@ export interface PrestigeUpgradeState {
   nextCost: number | null;
 }
 
+/** Compteurs cumulés sur toutes les parties, conservés au prestige. */
+export interface LifetimeStats {
+  resourcesCollected: number;
+  goldenResources: number;
+  absorbedResources: number;
+  fragmentsCollected: number;
+  summons: number;
+  wallsRemoved: number;
+  crownsEarned: number;
+}
+
 export interface ProgressionSnapshot {
   resources: number;
   fragments: number;
@@ -180,6 +191,7 @@ export interface ProgressionSnapshot {
   canPrestige: boolean;
   prestigeCount: number;
   prestigeUpgrades: readonly PrestigeUpgradeState[];
+  stats: Readonly<LifetimeStats>;
 }
 
 /** État sérialisable, utilisé par la sauvegarde locale. */
@@ -196,6 +208,7 @@ export interface ProgressionState {
   crowns: number;
   prestigeCount: number;
   prestigeUpgrades: Record<PrestigeUpgradeId, number>;
+  stats: LifetimeStats;
 }
 
 export type SummonResult =
@@ -244,6 +257,18 @@ function createUpgradeLevels(): Record<PrestigeUpgradeId, number> {
   };
 }
 
+function createStats(): LifetimeStats {
+  return {
+    resourcesCollected: 0,
+    goldenResources: 0,
+    absorbedResources: 0,
+    fragmentsCollected: 0,
+    summons: 0,
+    wallsRemoved: 0,
+    crownsEarned: 0,
+  };
+}
+
 function readCount(value: unknown, max = Number.MAX_SAFE_INTEGER): number {
   return typeof value === "number" && Number.isFinite(value)
     ? Math.min(max, Math.max(0, Math.floor(value)))
@@ -275,6 +300,7 @@ export class GameProgression {
   private crowns = 0;
   private prestigeCount = 0;
   private readonly prestigeUpgrades = createUpgradeLevels();
+  private stats = createStats();
   private readonly recentActions: string[] = [];
   private readonly listeners = new Set<ProgressionListener>();
   private readonly summonListeners = new Set<SummonListener>();
@@ -317,6 +343,7 @@ export class GameProgression {
           nextCost: level < costs.length ? costs[level] : null,
         };
       }),
+      stats: { ...this.stats },
     };
   }
 
@@ -369,13 +396,23 @@ export class GameProgression {
     return () => this.summonListeners.delete(listener);
   }
 
-  /** Ramasse une pépite et renvoie le nombre réellement crédité. */
-  collectResource(): number {
+  /**
+   * Ramasse une pépite et renvoie le nombre réellement crédité.
+   * `absorbed` signale une pépite aspirée par un jeton du crabe.
+   */
+  collectResource(absorbed = false): number {
     const goldenChance =
       this.prestigeUpgrades.golden * GOLDEN_CHANCE_PER_LEVEL;
     const amount = goldenChance > 0 && this.random() < goldenChance ? 2 : 1;
     this.resources += amount;
     this.runResourcesCollected += amount;
+    this.stats.resourcesCollected += amount;
+    if (amount > 1) {
+      this.stats.goldenResources += 1;
+    }
+    if (absorbed) {
+      this.stats.absorbedResources += amount;
+    }
     const summons = this.autoSummonEnabled ? this.autoSummon() : [];
     this.notify();
     this.emitSummons(summons, true);
@@ -384,6 +421,7 @@ export class GameProgression {
 
   collectFragment(amount = 1): void {
     this.fragments += amount;
+    this.stats.fragmentsCollected += amount;
     this.notify();
   }
 
@@ -433,6 +471,7 @@ export class GameProgression {
       Math.floor(this.random() * this.walls.length),
     );
     [this.lastRemovedWallIndex] = this.walls.splice(index, 1);
+    this.stats.wallsRemoved += 1;
     this.recordAction(
       `Mur aléatoire supprimé · ${WALL_REMOVAL_COST} fragments dépensés.`,
     );
@@ -488,6 +527,7 @@ export class GameProgression {
     }
 
     this.crowns += crowns;
+    this.stats.crownsEarned += crowns;
     this.prestigeCount += 1;
     this.startRun();
     this.recordAction(
@@ -561,6 +601,7 @@ export class GameProgression {
       crowns: this.crowns,
       prestigeCount: this.prestigeCount,
       prestigeUpgrades: { ...this.prestigeUpgrades },
+      stats: { ...this.stats },
     };
   }
 
@@ -603,6 +644,11 @@ export class GameProgression {
     this.runResourcesCollected = readCount(state.runResourcesCollected);
     this.crowns = readCount(state.crowns);
     this.prestigeCount = readCount(state.prestigeCount);
+    const stats = isRecord(state.stats) ? state.stats : {};
+    this.stats = createStats();
+    for (const key of Object.keys(this.stats) as (keyof LifetimeStats)[]) {
+      this.stats[key] = readCount(stats[key]);
+    }
     this.recentActions.length = 0;
     if (Array.isArray(state.recentActions)) {
       this.recentActions.push(
@@ -711,6 +757,7 @@ export class GameProgression {
 
     this.resources -= summonCost;
     this.successfulSummons += 1;
+    this.stats.summons += 1;
     const chances = this.getCompanionChances();
     let roll = this.random() * 100;
     let companion = availableCompanions[availableCompanions.length - 1];

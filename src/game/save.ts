@@ -1,3 +1,4 @@
+import type { AchievementTracker } from "./achievements";
 import type { GameProgression } from "./progression";
 import type { TutorialGuide } from "./tutorial";
 
@@ -28,6 +29,7 @@ export function loadGame(
   storage: SaveStorage | null,
   progression: GameProgression,
   tutorial: TutorialGuide,
+  achievements?: AchievementTracker,
 ): boolean {
   try {
     const raw = storage?.getItem(SAVE_KEY);
@@ -50,6 +52,12 @@ export function loadGame(
     if ("tutorial" in data) {
       tutorial.restore(data.tutorial);
     }
+    if ("achievements" in data) {
+      achievements?.restoreState(data.achievements);
+    } else {
+      // Sauvegarde antérieure aux succès : la partie en cours n’est pas chronométrée.
+      achievements?.forgetRunStart();
+    }
     return true;
   } catch {
     return false;
@@ -60,6 +68,7 @@ export function bindAutosave(
   storage: SaveStorage | null,
   progression: GameProgression,
   tutorial: TutorialGuide,
+  achievements?: AchievementTracker,
 ): AutosaveController {
   let timer: ReturnType<typeof setTimeout> | null = null;
   let enabled = storage !== null;
@@ -79,6 +88,7 @@ export function bindAutosave(
           version: SAVE_VERSION,
           progression: progression.exportState(),
           tutorial: tutorial.getStep(),
+          achievements: achievements?.exportState(),
         }),
       );
     } catch {

@@ -403,9 +403,12 @@ export class StartupScene extends Phaser.Scene {
   }
 
   /** Ramasse une pépite et renvoie le montant crédité (doublé par les pépites dorées). */
-  private creditResource(resource: Phaser.GameObjects.Arc): number {
+  private creditResource(
+    resource: Phaser.GameObjects.Arc,
+    absorbed = false,
+  ): number {
     resource.destroy();
-    const amount = this.progression.collectResource();
+    const amount = this.progression.collectResource(absorbed);
     this.tutorial.onResourceCollected();
     this.scheduleResourceSpawn(
       this.progression.getResourceRespawnDelay(RESOURCE_RESPAWN_DELAY),
@@ -492,7 +495,7 @@ export class StartupScene extends Phaser.Scene {
         const resource = this.resources[j];
         if (absorbedResources.has(resource)) {
           this.resources.splice(j, 1);
-          absorbed += this.creditResource(resource);
+          absorbed += this.creditResource(resource, true);
         }
       }
 

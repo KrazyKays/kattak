@@ -21,6 +21,10 @@
               <output id="fragment-count" aria-label="Fragments disponibles" aria-live="polite">0</output>
               <span id="fragment-unit">fragments</span>
             </p>
+            <p id="play-time-chip" class="hud-chip hud-timer" title="Temps de jeu">
+              <span class="hud-timer-icon" aria-hidden="true">⏱</span>
+              <output id="play-time" aria-label="Temps de jeu">0:00.0</output>
+            </p>
           </div>
         </header>
         <div class="arena-stage">
@@ -40,6 +44,7 @@
             </button>
           </div>
           <div id="summon-popup" class="summon-popup" role="status" aria-live="polite" hidden></div>
+          <div id="achievement-toast" class="achievement-toast" role="status" aria-live="polite" hidden></div>
         </div>
       </section>
 
@@ -67,6 +72,9 @@
             </button>
             <button id="prestige-tab" class="tab" type="button" role="tab" aria-controls="prestige-panel" aria-selected="false" tabindex="-1" hidden>
               <span class="tab-icon" aria-hidden="true">♛</span><span class="tab-label">Prestige</span>
+            </button>
+            <button id="tab-achievements" class="tab" type="button" role="tab" aria-controls="panel-achievements" aria-selected="false" tabindex="-1">
+              <span class="tab-icon" aria-hidden="true">★</span><span class="tab-label">Succès</span>
             </button>
             <button id="tab-journal" class="tab" type="button" role="tab" aria-controls="panel-journal" aria-selected="false" tabindex="-1">
               <span class="tab-icon" aria-hidden="true">≡</span><span class="tab-label">Journal</span>
@@ -124,6 +132,19 @@
               <p id="prestige-progress" class="prestige-progress" aria-live="polite"></p>
               <button id="prestige-button" class="summon-button prestige-button" type="button" disabled>Prestige</button>
               <ul id="prestige-upgrades" class="prestige-upgrades" aria-label="Talents de prestige"></ul>
+            </section>
+
+            <section id="panel-achievements" class="tab-panel" role="tabpanel" aria-labelledby="tab-achievements" hidden>
+              <header class="tab-panel-header">
+                <h2>Succès</h2>
+                <p class="achievement-total">
+                  <output id="achievement-count" aria-live="polite">0/0</output>
+                  <span id="achievement-percent">0 %</span>
+                </p>
+              </header>
+              <div class="achievement-meter" aria-hidden="true"><span id="achievement-meter-fill"></span></div>
+              <p id="achievement-run" class="achievement-run"></p>
+              <div id="achievement-list" class="achievement-list"></div>
             </section>
 
             <section id="panel-journal" class="tab-panel" role="tabpanel" aria-labelledby="tab-journal" hidden>
