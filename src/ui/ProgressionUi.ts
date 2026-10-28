@@ -2,10 +2,14 @@ import {
   COMPANION_RARITIES,
   COMPANIONS,
   GameProgression,
-  MAX_COMPANION_LEVEL,
+  MAX_REACHABLE_COMPANION_LEVEL,
 } from "../game/progression";
 import type { TutorialGuide } from "../game/tutorial";
 import type { CompanionId, ProgressionSnapshot } from "../game/progression";
+
+const chanceFormat = new Intl.NumberFormat("fr-FR", {
+  maximumFractionDigits: 1,
+});
 
 export function bindProgressionUi(
   progression: GameProgression,
@@ -45,6 +49,7 @@ export function bindProgressionUi(
     }
   >();
   let renderedActions: readonly string[] | null = null;
+  let renderedChances = "";
 
   for (const companion of COMPANIONS) {
     const rarityDefinition = COMPANION_RARITIES.find(
@@ -77,12 +82,15 @@ export function bindProgressionUi(
 
     const bonusLevels = document.createElement("ol");
     bonusLevels.className = "companion-bonus-levels";
-    const bonuses = companion.bonusByLevel.map((bonus, index) => {
-      const bonusLevel = document.createElement("li");
-      bonusLevel.textContent = `Niv. ${index + 1} : ${bonus}`;
-      bonusLevels.append(bonusLevel);
-      return bonusLevel;
-    });
+    const bonuses = Array.from(
+      { length: MAX_REACHABLE_COMPANION_LEVEL },
+      (_, index) => {
+        const bonusLevel = document.createElement("li");
+        bonusLevel.textContent = `Niv. ${index + 1} : ${companion.describeLevel(index + 1)}`;
+        bonusLevels.append(bonusLevel);
+        return bonusLevel;
+      },
+    );
     companionEntries.set(companion.id, {
       level,
       rarity,
@@ -99,6 +107,7 @@ export function bindProgressionUi(
     resourceUnit.textContent =
       snapshot.resources === 1 ? "pépite disponible" : "pépites disponibles";
 
+    const maxLevel = snapshot.maxCompanionLevel;
     let allMaxed = true;
     for (const companion of COMPANIONS) {
       const level = snapshot.companions[companion.id];
@@ -110,7 +119,7 @@ export function bindProgressionUi(
       entry.level.value =
         level === 0
           ? "Non obtenu"
-          : level >= MAX_COMPANION_LEVEL
+          : level >= maxLevel
             ? `Niv. ${level} · Max`
             : `Niv. ${level}`;
       const chance = snapshot.companionChances[companion.id];
@@ -121,28 +130,34 @@ export function bindProgressionUi(
         chance > 0 ? entry.rarityName : `${entry.rarityName}, niveau max`,
       );
       entry.bonuses.forEach((bonus, index) => {
+        bonus.hidden = index >= maxLevel;
         bonus.classList.toggle("is-unlocked", index < level);
         bonus.classList.toggle("is-next", index === level);
       });
-      if (level < MAX_COMPANION_LEVEL) {
+      if (level < maxLevel) {
         allMaxed = false;
       }
     }
 
-    companionChances.replaceChildren(
-      ...COMPANIONS.map((companion) => {
-        const item = document.createElement("li");
-        const chance = snapshot.companionChances[companion.id];
-        const formattedChance = new Intl.NumberFormat("fr-FR", {
-          maximumFractionDigits: 1,
-        }).format(chance);
-        item.textContent =
-          chance > 0
-            ? `${companion.name} · ${formattedChance} %`
-            : `${companion.name} · Niveau max`;
-        return item;
-      }),
-    );
+    // Les chances ne changent qu’à l’invocation : inutile de reconstruire
+    // la liste à chaque pépite ramassée.
+    const chancesKey = COMPANIONS.map(
+      ({ id }) => snapshot.companionChances[id],
+    ).join("|");
+    if (chancesKey !== renderedChances) {
+      renderedChances = chancesKey;
+      companionChances.replaceChildren(
+        ...COMPANIONS.map((companion) => {
+          const item = document.createElement("li");
+          const chance = snapshot.companionChances[companion.id];
+          item.textContent =
+            chance > 0
+              ? `${companion.name} · ${chanceFormat.format(chance)} %`
+              : `${companion.name} · Niveau max`;
+          return item;
+        }),
+      );
+    }
 
     summonButton.disabled = allMaxed || snapshot.resources < snapshot.summonCost;
     summonButton.textContent = allMaxed
@@ -158,8 +173,9 @@ export function bindProgressionUi(
       "is-multi-summon",
       snapshot.affordableSummons > 1,
     );
-    summonPreview.textContent =
-      !allMaxed && snapshot.affordableSummons === 0
+    summonPreview.textContent = allMaxed
+      ? "Chaque pépite récoltée rapproche maintenant votre prochaine couronne de prestige."
+      : snapshot.affordableSummons === 0
         ? `Prochaine invocation : ${snapshot.summonCost} pépites.`
         : "";
 

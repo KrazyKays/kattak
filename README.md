@@ -4,21 +4,22 @@ Petit jeu 2D jouable dans le navigateur, développé avec TypeScript, Phaser 3 e
 
 ## Gameplay
 
-- **Déplacement :** cliquez ou touchez l’arène pour déplacer le joueur. Vous pouvez changer de destination à tout moment. Les clics hors de l’arène sont ignorés.
+- **Déplacement :** cliquez ou touchez l’arène pour déplacer le joueur. Maintenez le clic (ou le doigt) et glissez pour que le joueur suive le pointeur. Les clics hors de l’arène sont ignorés.
 - **Obstacles :** quatre murs bloquent les trajectoires directes. Le joueur glisse le long des parois et doit les contourner.
 - **Collecte :** ramassez les pépites en entrant dans leur zone de contact. Le compteur augmente à chaque collecte. Les pépites réapparaissent après 3 secondes.
-- **Tutoriel :** un guide accompagne les premières actions (déplacement, collecte et invocation). Il peut être masqué et réapparaît au rechargement.
+- **Tutoriel :** un guide accompagne les premières actions (déplacement, collecte et invocation). Il peut être masqué ; son état est sauvegardé.
+- **Sauvegarde :** la progression (prestige compris) est enregistrée automatiquement dans le `localStorage` du navigateur. Le lien « Recommencer de zéro » efface la sauvegarde.
 
 ## Compagnons et invocations
 
 Les pépites permettent d’invoquer des compagnons passifs. Le coût commence à **5 pépites** et augmente de 1 après chaque invocation réussie.
 
-- Les doublons améliorent le niveau du compagnon jusqu’au niveau 3.
+- Les doublons améliorent le niveau du compagnon jusqu’au niveau 3 (jusqu’à 5 avec le talent de prestige « Au-delà du plafond »).
 - Les compagnons au niveau maximal ne peuvent plus être tirés.
 - L’invocation groupée permet d’utiliser plusieurs tirages en une fois.
 - Les probabilités détaillées sont accessibles via l’aide « ? ».
-- L’historique conserve les 5 dernières invocations.
-- La progression est réinitialisée au rechargement de la page.
+- Chaque invocation affiche une fenêtre de quelques secondes mettant en avant le compagnon (le plus rare en cas d’invocation groupée), sa rareté et son niveau.
+- L’historique conserve les 5 dernières actions.
 
 ### Compagnons et bonus
 
@@ -46,9 +47,26 @@ Le panneau **Actions** permet de dépenser des fragments :
 
 Les boutons d’invocation deviennent jaunes lorsque les pépites sont suffisantes. Les actions payées en fragments deviennent vertes lorsqu’elles sont accessibles.
 
+## Prestige
+
+Chaque pépite ramassée pendant une partie compte pour le prestige, même après avoir été dépensée. Les couronnes en attente valent `⌊√(pépites récoltées / 20)⌋` : 20 pépites pour la première, 80 pour la deuxième, 180 pour la troisième, etc.
+
+Le panneau **Prestige** apparaît dès la première couronne en vue. À partir de **3 couronnes en attente**, le bouton Prestige (à confirmer d’un second clic) convertit la partie en couronnes et réinitialise pépites, fragments, compagnons, coût d’invocation et murs. Les couronnes, les talents et l’historique sont conservés.
+
+| Talent | Niveaux | Coûts (couronnes) | Effet par niveau |
+|---|---|---|---|
+| Pépites dorées | 5 | 1, 2, 3, 4, 5 | +20 % de chances qu’une pépite compte double |
+| Héritage | 5 | 1, 2, 3, 4, 5 | +15 pépites au début de chaque partie |
+| Marchandage | 3 | 2, 3, 4 | −1 au coût de base des invocations |
+| Nid de pie | 3 | 1, 2, 3 | +5 fragments au début de chaque partie |
+| Mémoire mécanique | 1 | 2 | L’invocation automatique reste débloquée |
+| Au-delà du plafond | 2 | 4, 8 | +1 au niveau maximal des compagnons |
+
+Les bonus de départ (Héritage, Nid de pie) sont aussi crédités immédiatement à l’achat.
+
 ## Interface
 
-L’arène conserve un format carré. Sur grand écran, les panneaux de ressources, d’actions et d’historique sont disposés à côté de l’arène. Sur téléphone, ils passent en dessous.
+L’arène conserve un format carré. Sur grand écran, les panneaux de ressources, d’actions, de prestige et d’historique sont disposés à côté de l’arène. Sur téléphone, ils passent en dessous.
 
 L’interface adopte une esthétique de fanzine photocopié : papier cassé, trames imprimées, contours noirs et accents rouge brique.
 
@@ -68,7 +86,7 @@ npm run build
 npm run preview
 ```
 
-Le build statique est généré dans `dist/`.
+Le build statique est généré dans `dist/`. Phaser est isolé dans son propre chunk afin de rester en cache entre deux déploiements.
 
 ## Déploiement GitHub Pages
 

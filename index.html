@@ -29,6 +29,7 @@
               Masquer
             </button>
           </div>
+          <div id="summon-popup" class="summon-popup" role="status" aria-live="polite" hidden></div>
         </div>
       </section>
 
@@ -57,7 +58,10 @@
           </details>
           <ul id="companion-list" class="companion-list" aria-label="Compagnons"></ul>
           <p class="companion-hint">Touchez un compagnon pour voir le détail de ses bonus.</p>
-          <p class="panel-placeholder">La partie s’efface au prochain rechargement.</p>
+          <p class="panel-placeholder save-note">
+            Partie sauvegardée automatiquement sur cet appareil.
+            <button id="save-reset-button" class="save-reset-button" type="button">Recommencer de zéro</button>
+          </p>
         </section>
       </aside>
       <aside class="actions-panel panel-card" aria-labelledby="fragment-actions-title">
@@ -78,6 +82,20 @@
         </div>
         <p id="summon-preview" class="summon-preview" aria-live="polite"></p>
         <p id="summon-result" class="summon-result" role="status" aria-live="polite"></p>
+      </aside>
+      <aside id="prestige-panel" class="prestige-panel panel-card" aria-labelledby="prestige-title" hidden>
+        <h2 id="prestige-title">Prestige</h2>
+        <p class="resource-total crown-total">
+          <output id="crown-count" aria-label="Couronnes disponibles" aria-live="polite">0</output>
+          <span id="crown-unit">couronne à dépenser</span>
+        </p>
+        <p class="panel-placeholder">
+          Recommencez la partie pour convertir vos pépites récoltées en couronnes, puis achetez des talents permanents.
+        </p>
+        <div class="prestige-meter" aria-hidden="true"><span id="prestige-meter-fill"></span></div>
+        <p id="prestige-progress" class="prestige-progress" aria-live="polite"></p>
+        <button id="prestige-button" class="summon-button prestige-button" type="button" disabled>Prestige</button>
+        <ul id="prestige-upgrades" class="prestige-upgrades" aria-label="Talents de prestige"></ul>
       </aside>
       <aside class="history-panel panel-card" aria-labelledby="history-title">
         <h2 id="history-title">Historique</h2>

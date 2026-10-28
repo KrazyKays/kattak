@@ -2,8 +2,9 @@ import Phaser from "phaser";
 import {
   getNearestResources,
   isResourceTouchingCollectionZone,
+  type Point,
 } from "../collection";
-import type { GameProgression } from "../progression";
+import type { GameProgression, ProgressionSnapshot } from "../progression";
 import { RENDER_SCALE } from "../renderScale";
 import type { TutorialGuide } from "../tutorial";
 import {
@@ -11,7 +12,7 @@ import {
   isCircleCollidingWithAnyObstacle,
   moveCircleWithObstacles,
   resolveCirclePosition,
-  scaleObstacles,
+  scaleObstacle,
   type ObstacleRect,
 } from "../obstacles";
 
@@ -21,6 +22,8 @@ const ARENA = {
   right: 616 * RENDER_SCALE,
   bottom: 616 * RENDER_SCALE,
 };
+const GAME_SIZE = 640 * RENDER_SCALE;
+const ARENA_TEXTURE_KEY = "arena-background";
 const PLAYER_RADIUS = 16 * RENDER_SCALE;
 const PLAYER_SPEED = 240 * RENDER_SCALE;
 const RESOURCE_RADIUS = 12 * RENDER_SCALE;
@@ -30,6 +33,8 @@ const FRAGMENT_RESPAWN_DELAY = 8000;
 const SPECIAL_TOKEN_ABSORBED_RESOURCE_COUNT = 3;
 const RESOURCE_RESPAWN_RETRY_DELAY = 1000;
 const RESOURCE_SPAWN_SPACING = RESOURCE_RADIUS * 2 + 8 * RENDER_SCALE;
+const PLAYER_SPAWN_CLEARANCE = PLAYER_RADIUS + RESOURCE_RADIUS + 8 * RENDER_SCALE;
+const FEEDBACK_POOL_SIZE = 16;
 const RESOURCE_LOCATIONS = [
   { x: 112, y: 128 },
   { x: 520, y: 136 },
@@ -39,9 +44,17 @@ const RESOURCE_LOCATIONS = [
   { x: 488, y: 512 },
 ];
 
+const FEEDBACK_COLORS = {
+  resource: "#c93324",
+  golden: "#b07a12",
+  fragment: "#23766b",
+  token: "#7157a5",
+} as const;
+
 export class StartupScene extends Phaser.Scene {
   private player!: Phaser.GameObjects.Arc;
   private collectionZone!: Phaser.GameObjects.Arc;
+  private collectionZoneRadius = 0;
   private destination: Phaser.Math.Vector2 | null = null;
   private destinationMarker!: Phaser.GameObjects.Arc;
   private wallsGraphics!: Phaser.GameObjects.Graphics;
@@ -51,10 +64,12 @@ export class StartupScene extends Phaser.Scene {
   private pendingSpecialTokenSpawns = 0;
   private fragments: Phaser.GameObjects.Rectangle[] = [];
   private pendingFragmentSpawns = 0;
-  private readonly walls: ObstacleRect[] = scaleObstacles(
-    DEFAULT_WALLS,
-    RENDER_SCALE,
-  );
+  private walls: ObstacleRect[] = [];
+  private wallsKey = "";
+  private spawnCandidates: Point[] = [];
+  private feedbackPool: Phaser.GameObjects.Text[] = [];
+  private nextFeedback = 0;
+  private prestigeCount = 0;
 
   constructor(
     private readonly progression: GameProgression,
@@ -64,44 +79,32 @@ export class StartupScene extends Phaser.Scene {
   }
 
   create(): void {
-    const arena = this.add.graphics();
-    arena.fillStyle(0xeee4ce);
-    arena.fillRect(
-      ARENA.left,
-      ARENA.top,
-      ARENA.right - ARENA.left,
-      ARENA.bottom - ARENA.top,
-    );
-    arena.lineStyle(3 * RENDER_SCALE, 0x191815, 1);
-    arena.strokeRect(
-      ARENA.left,
-      ARENA.top,
-      ARENA.right - ARENA.left,
-      ARENA.bottom - ARENA.top,
-    );
-    arena.fillStyle(0x8a7962, 0.28);
-    for (let y = ARENA.top + 10 * RENDER_SCALE; y < ARENA.bottom; y += 16 * RENDER_SCALE) {
-      for (let x = ARENA.left + 10 * RENDER_SCALE; x < ARENA.right; x += 16 * RENDER_SCALE) {
-        if (((x / RENDER_SCALE + y / RENDER_SCALE) / 16) % 3 !== 0) {
-          arena.fillCircle(x, y, RENDER_SCALE);
-        }
-      }
-    }
+    // L’instance de scène est conservée lors d’un redémarrage (prestige).
+    this.destination = null;
+    this.resources = [];
+    this.specialTokens = [];
+    this.pendingSpecialTokenSpawns = 0;
+    this.fragments = [];
+    this.pendingFragmentSpawns = 0;
+    this.observedResourceCapacity = RESOURCE_LOCATIONS.length;
+    this.feedbackPool = [];
+    this.nextFeedback = 0;
+    this.wallsKey = "";
+
+    this.add.image(0, 0, this.getArenaTexture()).setOrigin(0);
 
     this.wallsGraphics = this.add.graphics().setDepth(2);
-    this.drawWalls();
-    this.progression.subscribe(({ wallsRemaining, lastRemovedWallIndex }) => {
-      if (this.walls.length > wallsRemaining && lastRemovedWallIndex !== null) {
-        this.walls.splice(lastRemovedWallIndex, 1);
-        this.drawWalls();
-      }
-    });
+    const initial = this.progression.getSnapshot();
+    this.prestigeCount = initial.prestigeCount;
+    this.syncWalls(initial.walls);
+    const unsubscribe = this.progression.subscribe(this.onProgression);
 
+    this.collectionZoneRadius = this.getCollectionZoneRadius();
     this.collectionZone = this.add
       .circle(
         320 * RENDER_SCALE,
         320 * RENDER_SCALE,
-        this.getCollectionZoneRadius(),
+        this.collectionZoneRadius,
         0xc93324,
         0.08,
       )
@@ -109,10 +112,7 @@ export class StartupScene extends Phaser.Scene {
       .setDepth(1);
 
     this.resources = RESOURCE_LOCATIONS.map(({ x, y }) =>
-      this.add
-        .circle(x * RENDER_SCALE, y * RENDER_SCALE, RESOURCE_RADIUS, 0xe2a82e)
-        .setStrokeStyle(3 * RENDER_SCALE, 0x191815)
-        .setDepth(3),
+      this.createResource(x * RENDER_SCALE, y * RENDER_SCALE),
     );
 
     this.player = this.add
@@ -127,6 +127,12 @@ export class StartupScene extends Phaser.Scene {
       .setVisible(false);
 
     this.input.on(Phaser.Input.Events.POINTER_DOWN, this.setDestination, this);
+    this.input.on(Phaser.Input.Events.POINTER_MOVE, this.followPointer, this);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      unsubscribe();
+      this.input.off(Phaser.Input.Events.POINTER_DOWN, this.setDestination, this);
+      this.input.off(Phaser.Input.Events.POINTER_MOVE, this.followPointer, this);
+    });
   }
 
   update(_time: number, delta: number): void {
@@ -151,15 +157,109 @@ export class StartupScene extends Phaser.Scene {
     }
 
     const collectionZoneRadius = this.getCollectionZoneRadius();
-    this.collectionZone
-      .setPosition(this.player.x, this.player.y)
-      .setRadius(collectionZoneRadius);
+    this.collectionZone.setPosition(this.player.x, this.player.y);
+    if (collectionZoneRadius !== this.collectionZoneRadius) {
+      this.collectionZoneRadius = collectionZoneRadius;
+      this.collectionZone.setRadius(collectionZoneRadius);
+    }
     this.collectResources(collectionZoneRadius);
     this.ensureResourceCapacity();
     this.ensureSpecialTokens();
     this.collectSpecialTokens(collectionZoneRadius);
     this.ensureFragments();
     this.collectFragments(collectionZoneRadius);
+  }
+
+  private readonly onProgression = (snapshot: ProgressionSnapshot): void => {
+    if (snapshot.prestigeCount !== this.prestigeCount) {
+      this.prestigeCount = snapshot.prestigeCount;
+      this.scene.restart();
+      return;
+    }
+    this.syncWalls(snapshot.walls);
+  };
+
+  /** Le fond pointillé est dessiné une seule fois dans une texture. */
+  private getArenaTexture(): string {
+    if (this.textures.exists(ARENA_TEXTURE_KEY)) {
+      return ARENA_TEXTURE_KEY;
+    }
+
+    const arena = this.make.graphics({}, false);
+    arena.fillStyle(0xeee4ce);
+    arena.fillRect(0, 0, GAME_SIZE, GAME_SIZE);
+    arena.fillStyle(0x8a7962, 0.28);
+    for (let y = ARENA.top + 10 * RENDER_SCALE; y < ARENA.bottom; y += 16 * RENDER_SCALE) {
+      for (let x = ARENA.left + 10 * RENDER_SCALE; x < ARENA.right; x += 16 * RENDER_SCALE) {
+        if (((x / RENDER_SCALE + y / RENDER_SCALE) / 16) % 3 !== 0) {
+          arena.fillCircle(x, y, RENDER_SCALE);
+        }
+      }
+    }
+    arena.lineStyle(3 * RENDER_SCALE, 0x191815, 1);
+    arena.strokeRect(
+      ARENA.left,
+      ARENA.top,
+      ARENA.right - ARENA.left,
+      ARENA.bottom - ARENA.top,
+    );
+    arena.generateTexture(ARENA_TEXTURE_KEY, GAME_SIZE, GAME_SIZE);
+    arena.destroy();
+    return ARENA_TEXTURE_KEY;
+  }
+
+  private syncWalls(wallIndices: readonly number[]): void {
+    const key = wallIndices.join(",");
+    if (key === this.wallsKey) {
+      return;
+    }
+    this.wallsKey = key;
+    this.walls = wallIndices.map((index) =>
+      scaleObstacle(DEFAULT_WALLS[index], RENDER_SCALE),
+    );
+    this.spawnCandidates = this.computeSpawnCandidates();
+    this.drawWalls();
+  }
+
+  private showFeedback(x: number, y: number, label: string, color: string): void {
+    let feedback = this.feedbackPool[this.nextFeedback];
+    if (!feedback) {
+      feedback = this.add
+        .text(0, 0, label, {
+          fontFamily: "Impact, Arial, sans-serif",
+          fontSize: `${16 * RENDER_SCALE}px`,
+          fontStyle: "bold",
+          color,
+          stroke: "#f4eddf",
+          strokeThickness: 3 * RENDER_SCALE,
+        })
+        .setOrigin(0.5)
+        .setDepth(10);
+      this.feedbackPool[this.nextFeedback] = feedback;
+    } else {
+      this.tweens.killTweensOf(feedback);
+      // Ne redessine le texte que s’il change réellement.
+      if (feedback.style.color !== color) {
+        feedback.setColor(color);
+      }
+      feedback.setText(label);
+    }
+    this.nextFeedback = (this.nextFeedback + 1) % FEEDBACK_POOL_SIZE;
+
+    feedback
+      .setPosition(x, y - 20 * RENDER_SCALE)
+      .setAlpha(1)
+      .setScale(1)
+      .setVisible(true);
+    this.tweens.add({
+      targets: feedback,
+      y: feedback.y - 24 * RENDER_SCALE,
+      alpha: 0,
+      scale: 1.1,
+      duration: 1000,
+      ease: "Cubic.Out",
+      onComplete: () => feedback.setVisible(false),
+    });
   }
 
   private ensureFragments(): void {
@@ -174,7 +274,8 @@ export class StartupScene extends Phaser.Scene {
   }
 
   private collectFragments(collectionZoneRadius: number): void {
-    this.fragments = this.fragments.filter((fragment) => {
+    for (let i = this.fragments.length - 1; i >= 0; i -= 1) {
+      const fragment = this.fragments[i];
       if (
         !isResourceTouchingCollectionZone(
           this.player,
@@ -183,36 +284,15 @@ export class StartupScene extends Phaser.Scene {
           RESOURCE_RADIUS,
         )
       ) {
-        return true;
+        continue;
       }
 
-      const feedback = this.add
-        .text(fragment.x, fragment.y - 20 * RENDER_SCALE, "+1 FRAGMENT", {
-          fontFamily: "Impact, Arial, sans-serif",
-          fontSize: `${16 * RENDER_SCALE}px`,
-          fontStyle: "bold",
-          color: "#23766b",
-          stroke: "#f4eddf",
-          strokeThickness: 3 * RENDER_SCALE,
-        })
-        .setOrigin(0.5)
-        .setDepth(10);
-
-      this.tweens.add({
-        targets: feedback,
-        y: feedback.y - 24 * RENDER_SCALE,
-        alpha: 0,
-        scale: 1.1,
-        duration: 1000,
-        ease: "Cubic.Out",
-        onComplete: () => feedback.destroy(),
-      });
-
+      this.fragments.splice(i, 1);
+      this.showFeedback(fragment.x, fragment.y, "+1 FRAGMENT", FEEDBACK_COLORS.fragment);
       fragment.destroy();
       this.progression.collectFragment();
       this.scheduleFragmentSpawn(FRAGMENT_RESPAWN_DELAY);
-      return false;
-    });
+    }
   }
 
   private scheduleFragmentSpawn(delay: number): void {
@@ -274,6 +354,13 @@ export class StartupScene extends Phaser.Scene {
     }
   }
 
+  /** Maintenir le pointeur enfoncé fait suivre la destination. */
+  private followPointer(pointer: Phaser.Input.Pointer): void {
+    if (pointer.isDown) {
+      this.setDestination(pointer);
+    }
+  }
+
   private setDestination(pointer: Phaser.Input.Pointer): void {
     if (
       pointer.x < ARENA.left ||
@@ -303,15 +390,31 @@ export class StartupScene extends Phaser.Scene {
       ARENA,
     );
 
-    this.destination = new Phaser.Math.Vector2(resolved.x, resolved.y);
+    if (this.destination) {
+      this.destination.set(resolved.x, resolved.y);
+    } else {
+      this.destination = new Phaser.Math.Vector2(resolved.x, resolved.y);
+    }
     this.destinationMarker
       .setPosition(resolved.x, resolved.y)
       .setVisible(true);
     this.tutorial.onMoveCommand();
   }
 
+  /** Ramasse une pépite et renvoie le montant crédité (doublé par les pépites dorées). */
+  private creditResource(resource: Phaser.GameObjects.Arc): number {
+    resource.destroy();
+    const amount = this.progression.collectResource();
+    this.tutorial.onResourceCollected();
+    this.scheduleResourceSpawn(
+      this.progression.getResourceRespawnDelay(RESOURCE_RESPAWN_DELAY),
+    );
+    return amount;
+  }
+
   private collectResources(collectionZoneRadius: number): void {
-    this.resources = this.resources.filter((resource) => {
+    for (let i = this.resources.length - 1; i >= 0; i -= 1) {
+      const resource = this.resources[i];
       if (
         !isResourceTouchingCollectionZone(
           this.player,
@@ -320,39 +423,18 @@ export class StartupScene extends Phaser.Scene {
           RESOURCE_RADIUS,
         )
       ) {
-        return true;
+        continue;
       }
 
-      const pickupFeedback = this.add
-        .text(resource.x, resource.y - 20 * RENDER_SCALE, "+1 PÉPITE", {
-          fontFamily: "Impact, Arial, sans-serif",
-          fontSize: `${16 * RENDER_SCALE}px`,
-          fontStyle: "bold",
-          color: "#c93324",
-          stroke: "#f4eddf",
-          strokeThickness: 3 * RENDER_SCALE,
-        })
-        .setOrigin(0.5)
-        .setDepth(10);
-
-      this.tweens.add({
-        targets: pickupFeedback,
-        y: pickupFeedback.y - 24 * RENDER_SCALE,
-        alpha: 0,
-        scale: 1.1,
-        duration: 1000,
-        ease: "Cubic.Out",
-        onComplete: () => pickupFeedback.destroy(),
-      });
-
-      resource.destroy();
-      this.progression.collectResource();
-      this.tutorial.onResourceCollected();
-      this.scheduleResourceSpawn(
-        this.progression.getResourceRespawnDelay(RESOURCE_RESPAWN_DELAY),
+      this.resources.splice(i, 1);
+      const amount = this.creditResource(resource);
+      this.showFeedback(
+        resource.x,
+        resource.y,
+        amount > 1 ? `+${amount} PÉPITES !` : "+1 PÉPITE",
+        amount > 1 ? FEEDBACK_COLORS.golden : FEEDBACK_COLORS.resource,
       );
-      return false;
-    });
+    }
   }
 
   private getCollectionZoneRadius(): number {
@@ -384,7 +466,8 @@ export class StartupScene extends Phaser.Scene {
   }
 
   private collectSpecialTokens(collectionZoneRadius: number): void {
-    this.specialTokens = this.specialTokens.filter((token) => {
+    for (let i = this.specialTokens.length - 1; i >= 0; i -= 1) {
+      const token = this.specialTokens[i];
       if (
         !isResourceTouchingCollectionZone(
           this.player,
@@ -393,60 +476,35 @@ export class StartupScene extends Phaser.Scene {
           RESOURCE_RADIUS,
         )
       ) {
-        return true;
+        continue;
       }
 
-      const absorbedResources = getNearestResources(
-        token,
-        this.resources,
-        SPECIAL_TOKEN_ABSORBED_RESOURCE_COUNT,
+      const absorbedResources = new Set(
+        getNearestResources(
+          token,
+          this.resources,
+          SPECIAL_TOKEN_ABSORBED_RESOURCE_COUNT,
+        ),
       );
-      const absorbedSet = new Set(absorbedResources);
-      this.resources = this.resources.filter((resource) => {
-        if (!absorbedSet.has(resource)) {
-          return true;
+      let absorbed = 0;
+      for (let j = this.resources.length - 1; j >= 0; j -= 1) {
+        const resource = this.resources[j];
+        if (absorbedResources.has(resource)) {
+          this.resources.splice(j, 1);
+          absorbed += this.creditResource(resource);
         }
+      }
 
-        resource.destroy();
-        this.progression.collectResource();
-        this.tutorial.onResourceCollected();
-        this.scheduleResourceSpawn(
-          this.progression.getResourceRespawnDelay(RESOURCE_RESPAWN_DELAY),
-        );
-        return false;
-      });
-
-      const feedback = this.add
-        .text(
-          token.x,
-          token.y - 20 * RENDER_SCALE,
-          `+${absorbedResources.length} PÉPITE${absorbedResources.length === 1 ? "" : "S"} ASPIRÉE${absorbedResources.length === 1 ? "" : "S"}`,
-          {
-            fontFamily: "Impact, Arial, sans-serif",
-            fontSize: `${16 * RENDER_SCALE}px`,
-            fontStyle: "bold",
-            color: "#7157a5",
-            stroke: "#f4eddf",
-            strokeThickness: 3 * RENDER_SCALE,
-          },
-        )
-        .setOrigin(0.5)
-        .setDepth(10);
-
-      this.tweens.add({
-        targets: feedback,
-        y: feedback.y - 24 * RENDER_SCALE,
-        alpha: 0,
-        scale: 1.1,
-        duration: 1000,
-        ease: "Cubic.Out",
-        onComplete: () => feedback.destroy(),
-      });
-
+      this.specialTokens.splice(i, 1);
+      this.showFeedback(
+        token.x,
+        token.y,
+        `+${absorbed} PÉPITE${absorbed === 1 ? "" : "S"} ASPIRÉE${absorbed === 1 ? "" : "S"}`,
+        FEEDBACK_COLORS.token,
+      );
       token.destroy();
       this.scheduleSpecialTokenSpawn(SPECIAL_TOKEN_RESPAWN_DELAY);
-      return false;
-    });
+    }
   }
 
   private scheduleSpecialTokenSpawn(delay: number): void {
@@ -486,6 +544,13 @@ export class StartupScene extends Phaser.Scene {
     this.time.delayedCall(delay, this.spawnPendingResource, [], this);
   }
 
+  private createResource(x: number, y: number): Phaser.GameObjects.Arc {
+    return this.add
+      .circle(x, y, RESOURCE_RADIUS, 0xe2a82e)
+      .setStrokeStyle(3 * RENDER_SCALE, 0x191815)
+      .setDepth(3);
+  }
+
   private spawnPendingResource(): void {
     const capacity = this.progression.getBaseResourceCapacity(
       RESOURCE_LOCATIONS.length,
@@ -505,17 +570,12 @@ export class StartupScene extends Phaser.Scene {
       return;
     }
 
-    const resource = this.add
-      .circle(position.x, position.y, RESOURCE_RADIUS, 0xe2a82e)
-      .setStrokeStyle(3 * RENDER_SCALE, 0x191815)
-      .setDepth(3);
-
-    this.resources.push(resource);
+    this.resources.push(this.createResource(position.x, position.y));
   }
 
-  private findAvailableResourcePosition(): Phaser.Math.Vector2 | null {
-    const positions: Phaser.Math.Vector2[] = [];
-
+  /** Grille des emplacements hors murs, recalculée seulement quand les murs changent. */
+  private computeSpawnCandidates(): Point[] {
+    const candidates: Point[] = [];
     for (
       let y = ARENA.top + RESOURCE_RADIUS;
       y <= ARENA.bottom - RESOURCE_RADIUS;
@@ -526,28 +586,51 @@ export class StartupScene extends Phaser.Scene {
         x <= ARENA.right - RESOURCE_RADIUS;
         x += RESOURCE_SPAWN_SPACING
       ) {
-        const playerClear =
-          Phaser.Math.Distance.Between(x, y, this.player.x, this.player.y) >
-          PLAYER_RADIUS + RESOURCE_RADIUS + 8 * RENDER_SCALE;
-        const resourcesClear = [
-          ...this.resources,
-          ...this.specialTokens,
-          ...this.fragments,
-        ].every(
-          (resource) =>
-            Phaser.Math.Distance.Between(x, y, resource.x, resource.y) >
-            RESOURCE_SPAWN_SPACING,
-        );
-        const wallsClear = !isCircleCollidingWithAnyObstacle(
-          x,
-          y,
-          RESOURCE_RADIUS + 4 * RENDER_SCALE,
-          this.walls,
-        );
-
-        if (playerClear && resourcesClear && wallsClear) {
-          positions.push(new Phaser.Math.Vector2(x, y));
+        if (
+          !isCircleCollidingWithAnyObstacle(
+            x,
+            y,
+            RESOURCE_RADIUS + 4 * RENDER_SCALE,
+            this.walls,
+          )
+        ) {
+          candidates.push({ x, y });
         }
+      }
+    }
+    return candidates;
+  }
+
+  private findAvailableResourcePosition(): Point | null {
+    const minSpacingSquared = RESOURCE_SPAWN_SPACING * RESOURCE_SPAWN_SPACING;
+    const playerClearanceSquared =
+      PLAYER_SPAWN_CLEARANCE * PLAYER_SPAWN_CLEARANCE;
+    const isClear = (
+      x: number,
+      y: number,
+      items: readonly Point[],
+    ): boolean => {
+      for (const item of items) {
+        const dx = x - item.x;
+        const dy = y - item.y;
+        if (dx * dx + dy * dy <= minSpacingSquared) {
+          return false;
+        }
+      }
+      return true;
+    };
+
+    const positions: Point[] = [];
+    for (const candidate of this.spawnCandidates) {
+      const dx = candidate.x - this.player.x;
+      const dy = candidate.y - this.player.y;
+      if (
+        dx * dx + dy * dy > playerClearanceSquared &&
+        isClear(candidate.x, candidate.y, this.resources) &&
+        isClear(candidate.x, candidate.y, this.specialTokens) &&
+        isClear(candidate.x, candidate.y, this.fragments)
+      ) {
+        positions.push(candidate);
       }
     }
 

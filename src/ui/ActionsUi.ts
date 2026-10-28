@@ -1,13 +1,6 @@
 import type { GameProgression, ProgressionSnapshot } from "../game/progression";
 import type { TutorialGuide } from "../game/tutorial";
 
-function sumLevels(snapshot: ProgressionSnapshot): number {
-  return Object.values(snapshot.companions).reduce(
-    (total, level) => total + level,
-    0,
-  );
-}
-
 export function bindActionsUi(
   progression: GameProgression,
   tutorial: TutorialGuide,
@@ -25,8 +18,6 @@ export function bindActionsUi(
   ) {
     throw new Error("L’interface des actions est incomplète.");
   }
-
-  let previousLevels: number | null = null;
 
   const render = (snapshot: ProgressionSnapshot): void => {
     fragmentCount.value = String(snapshot.fragments);
@@ -60,20 +51,15 @@ export function bindActionsUi(
       : snapshot.autoSummonEnabled
         ? "Invocation automatique : activée"
         : "Invocation automatique : désactivée";
-
-    // Les invocations automatiques doivent aussi faire avancer le tutoriel.
-    const levels = sumLevels(snapshot);
-    if (
-      previousLevels !== null &&
-      levels > previousLevels &&
-      snapshot.autoSummonEnabled
-    ) {
-      tutorial.onCompanionSummoned();
-    }
-    previousLevels = levels;
   };
 
   const unsubscribe = progression.subscribe(render);
+  // Les invocations automatiques doivent aussi faire avancer le tutoriel.
+  const unsubscribeSummons = progression.onSummon(({ automatic }) => {
+    if (automatic) {
+      tutorial.onCompanionSummoned();
+    }
+  });
   const removeWall = (): void => {
     progression.removeRandomWall();
   };
@@ -89,6 +75,7 @@ export function bindActionsUi(
   autoSummonButton.addEventListener("click", toggleAutoSummon);
   return () => {
     unsubscribe();
+    unsubscribeSummons();
     wallRemovalButton.removeEventListener("click", removeWall);
     autoSummonButton.removeEventListener("click", toggleAutoSummon);
   };

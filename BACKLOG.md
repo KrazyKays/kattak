@@ -11,21 +11,35 @@ Les priorités ci-dessous privilégient d'abord les améliorations compatibles
 avec la progression actuelle, puis les fonctionnalités qui élargissent les
 mécaniques ou demandent des choix de conception.
 
-1. **Action : prestige des compagnons** — Permettre au joueur de dépenser des
-    fragments (item 8) pour « prestiger » un compagnon : le remettre
-    au niveau 0 en échange d'un bonus permanent améliorant ses statistiques
-    au-delà du plafond actuel de niveau 3 (par exemple +X % supplémentaire par
-    prestige). Définir le coût, le nombre de niveaux de prestige possibles, la
-    persistance du bonus, l'affichage dans le panneau des compagnons et
-    l'intégration dans l'historique des actions. Dépend de l'item 8. Attention à
-    l'équilibre : le prestige doit offrir un gain net sur la durée malgré le
-    retour au niveau 0.
+1. **Mur stoppeurs** — Entrer en contact avec un mur stoppe le déplacement du
+   joueur, avec un léger repoussement pour ne pas rester collé à la paroi.
+   Point d’attention : le glissement actuel le long des murs et le
+   déplacement en maintenant le pointeur rendent les contournements fluides ;
+   un arrêt net risque de frustrer en glisser continu. À tester derrière une
+   option ou seulement sur certains murs.
 
-2. **Pop up d'invocation** — à chaque invocation, faire apparaittre une popup, qui permet de mettre en avant la rareté du compagnon invoqué, et son nom au minimum, pendant quelques secondes seulement.
+2. **Équilibrage du prestige** — Mesurer en jeu la durée d’une première partie
+   (cible : 8 à 12 minutes jusqu’à 3 couronnes) et ajuster
+   `CROWN_RESOURCE_STEP`, `PRESTIGE_MIN_CROWNS` et les coûts des talents.
 
-3. **Sauvegarde local** — Utiliser localStorage pour sauvegarder la progression du joueur.
+3. **Gains hors ligne** — Créditer une fraction des pépites qu’auraient
+   récoltées les jetons aspirants pendant l’absence. Dépend de la sauvegarde
+   locale (horodatage à ajouter au format de sauvegarde, version 2).
 
-4. **Mur stoppeurs** — Entrer en contact avec un mur stop le déplacement du joueur. Avec un léger repoussement du mur afin que le joueur puisse faire un autre déplacement sans rester bloqué, collé au mur.
+4. **Retour sonore** — Sons courts pour la collecte, la pépite double,
+   l’invocation (variant selon la rareté) et le prestige, avec un bouton muet.
+
+5. **Nouveaux compagnons de fin de cycle** — Un groupe « Légendaire »
+   uniquement invocable après un premier prestige, pour renouveler les parties
+   suivantes.
+
+## Fait
+
+- Prestige global avec couronnes et 6 talents permanents (remplace l’idée de
+  prestige par compagnon : le talent « Au-delà du plafond » permet de dépasser
+  le niveau 3).
+- Popup d’invocation mettant en avant rareté, nom et niveau.
+- Sauvegarde locale automatique (`localStorage`, clé `kattak:save`).
 
 ## Format suggéré
 

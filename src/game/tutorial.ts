@@ -7,6 +7,14 @@ export type TutorialStep =
 
 type TutorialListener = (step: TutorialStep) => void;
 
+const TUTORIAL_STEPS: readonly TutorialStep[] = [
+  "move",
+  "collect",
+  "summon",
+  "complete",
+  "dismissed",
+];
+
 export class TutorialGuide {
   private step: TutorialStep = "move";
   private readonly listeners = new Set<TutorialListener>();
@@ -31,6 +39,15 @@ export class TutorialGuide {
 
   onCompanionSummoned(): void {
     this.advance("summon", "complete");
+  }
+
+  restore(step: unknown): void {
+    const restored = TUTORIAL_STEPS.find((candidate) => candidate === step);
+    if (!restored || restored === this.step) {
+      return;
+    }
+    this.step = restored;
+    this.notify();
   }
 
   dismiss(): void {
