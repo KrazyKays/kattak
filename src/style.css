@@ -101,6 +101,10 @@ body {
   white-space: nowrap;
 }
 
+.hud-timer[hidden] {
+  display: none;
+}
+
 .hud-timer {
   align-items: center;
   font-variant-numeric: tabular-nums;
@@ -735,6 +739,29 @@ canvas {
   width: 0;
   height: 100%;
   background: #e2a82e;
+}
+
+.timer-toggle {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 0.625rem;
+  padding: 0.4rem 0.55rem;
+  border: 2px solid #191815;
+  background: #efe7d7;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.timer-toggle:has(input:checked) {
+  background: #f7e4a8;
+}
+
+.timer-toggle input {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  accent-color: #b07a12;
 }
 
 .achievement-run {

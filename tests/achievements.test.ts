@@ -17,6 +17,7 @@ import { bindAutosave, loadGame, SAVE_KEY } from "../src/game/save";
 import { TutorialGuide } from "../src/game/tutorial";
 import {
   ACHIEVEMENT_TOAST_DURATION,
+  TIMER_VISIBLE_KEY,
   bindAchievementsUi,
 } from "../src/ui/AchievementsUi";
 
@@ -51,6 +52,7 @@ afterEach(() => {
   cleanups.splice(0).forEach((cleanup) => cleanup());
   document.body.replaceChildren();
   vi.useRealTimers();
+  localStorage.clear();
 });
 
 describe("formatPlayTime", () => {
@@ -240,7 +242,8 @@ describe("achievement tracker", () => {
 describe("achievements UI", () => {
   function mount(tracker: AchievementTracker): void {
     document.body.innerHTML = `
-      <p id="play-time-chip"><output id="play-time"></output></p>
+      <p id="play-time-chip" hidden><output id="play-time"></output></p>
+      <input id="timer-toggle" type="checkbox" />
       <button id="tab-achievements" aria-selected="false"></button>
       <output id="achievement-count"></output>
       <span id="achievement-percent"></span>
@@ -252,8 +255,38 @@ describe("achievements UI", () => {
     cleanups.push(bindAchievementsUi(tracker));
   }
 
+  it("hides the clock until speedrun mode is turned on", () => {
+    const clock = createClock();
+    const tracker = new AchievementTracker(clock.now);
+    const progression = new GameProgression(() => 0);
+    tracker.observe(progression);
+    mount(tracker);
+    tracker.start();
+    clock.advance(2500);
+    progression.collectResource();
+
+    const chip = document.getElementById("play-time-chip") as HTMLElement;
+    const status = document.querySelector(
+      '[data-achievement="first-nugget"] .achievement-status',
+    );
+    expect(chip.hidden).toBe(true);
+    expect(status?.textContent).toBe("");
+    expect(document.getElementById("achievement-toast")?.textContent).not.toContain(
+      "0:02.5",
+    );
+
+    const toggle = document.getElementById("timer-toggle") as HTMLInputElement;
+    toggle.checked = true;
+    toggle.dispatchEvent(new Event("change"));
+    expect(chip.hidden).toBe(false);
+    expect(document.getElementById("play-time")?.textContent).toBe("0:02.5");
+    expect(status?.textContent).toBe("0:02.5");
+    expect(localStorage.getItem(TIMER_VISIBLE_KEY)).toBe("on");
+  });
+
   it("lists every achievement and announces unlocks", () => {
     vi.useFakeTimers();
+    localStorage.setItem(TIMER_VISIBLE_KEY, "on");
     const clock = createClock();
     const tracker = new AchievementTracker(clock.now);
     const progression = new GameProgression(() => 0);

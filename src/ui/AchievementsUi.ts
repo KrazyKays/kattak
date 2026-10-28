@@ -7,7 +7,24 @@ import {
 } from "../game/achievements";
 
 export const ACHIEVEMENT_TOAST_DURATION = 3200;
+export const TIMER_VISIBLE_KEY = "kattak:timer";
 const CLOCK_REFRESH = 100;
+
+function readTimerVisible(): boolean {
+  try {
+    return window.localStorage.getItem(TIMER_VISIBLE_KEY) === "on";
+  } catch {
+    return false;
+  }
+}
+
+function writeTimerVisible(visible: boolean): void {
+  try {
+    window.localStorage.setItem(TIMER_VISIBLE_KEY, visible ? "on" : "off");
+  } catch {
+    // Préférence de confort : on ignore un stockage indisponible.
+  }
+}
 
 interface ToastEntry {
   label: string;
@@ -24,6 +41,7 @@ export function bindAchievementsUi(achievements: AchievementTracker): () => void
   const percent = document.getElementById("achievement-percent");
   const meter = document.getElementById("achievement-meter-fill");
   const runNote = document.getElementById("achievement-run");
+  const timerToggle = document.getElementById("timer-toggle");
   const list = document.getElementById("achievement-list");
   const toast = document.getElementById("achievement-toast");
 
@@ -35,6 +53,7 @@ export function bindAchievementsUi(achievements: AchievementTracker): () => void
     !(percent instanceof HTMLElement) ||
     !(meter instanceof HTMLElement) ||
     !(runNote instanceof HTMLElement) ||
+    !(timerToggle instanceof HTMLInputElement) ||
     !(list instanceof HTMLElement) ||
     !(toast instanceof HTMLElement)
   ) {
@@ -95,8 +114,14 @@ export function bindAchievementsUi(achievements: AchievementTracker): () => void
   }
 
   let snapshot: AchievementSnapshot = achievements.getSnapshot();
+  // Le chrono tourne toujours ; il n’est affiché qu’en mode speedrun.
+  let timerVisible = readTimerVisible();
+  timerToggle.checked = timerVisible;
 
   const renderClock = (): void => {
+    if (!timerVisible) {
+      return;
+    }
     const time = formatPlayTime(snapshot.completedAt ?? achievements.getPlayTime());
     if (clock.value !== time) {
       clock.value = time;
@@ -111,11 +136,14 @@ export function bindAchievementsUi(achievements: AchievementTracker): () => void
     meter.style.width = `${Math.round(ratio * 100)}%`;
 
     const complete = snapshot.completedAt !== null;
+    clockChip.hidden = !timerVisible;
     clockChip.classList.toggle("is-complete", complete);
     clockChip.title = complete ? "Temps final · 100 %" : "Temps de jeu";
     runNote.textContent = complete
-      ? `100 % en ${formatPlayTime(snapshot.completedAt ?? 0)} · chrono arrêté. Bravo !`
-      : "Le chrono s’arrête à 100 %. Pour une nouvelle tentative : Journal › Recommencer de zéro.";
+      ? `100 % en ${formatPlayTime(snapshot.completedAt ?? 0)} de jeu. Bravo !`
+      : timerVisible
+        ? "Le chrono mesure le temps de jeu depuis le début et s’arrête à 100 %. Nouvelle tentative : Journal › Recommencer de zéro."
+        : "Envie de viser le 100 % le plus vite possible ? Le mode speedrun affiche le chrono et le temps de chaque succès.";
     runNote.classList.toggle("is-complete", complete);
     renderClock();
 
@@ -129,14 +157,16 @@ export function bindAchievementsUi(achievements: AchievementTracker): () => void
       const value = snapshot.progress[achievement.id] ?? 0;
       entry.item.classList.toggle("is-unlocked", unlocked);
       const status = unlocked
-        ? formatPlayTime(unlockedAt)
+        ? timerVisible
+          ? formatPlayTime(unlockedAt)
+          : ""
         : achievement.target > 1
           ? `${value}/${achievement.target}`
           : "";
       if (entry.status.textContent !== status) {
         entry.status.textContent = status;
       }
-      entry.status.title = unlocked ? "Obtenu à ce temps de jeu" : "";
+      entry.status.title = unlocked && timerVisible ? "Obtenu à ce temps de jeu" : "";
       if (entry.bar) {
         entry.bar.style.width = `${Math.round(
           ((unlocked ? achievement.target : value) / achievement.target) * 100,
@@ -179,7 +209,9 @@ export function bindAchievementsUi(achievements: AchievementTracker): () => void
     const current = achievements.getSnapshot();
     for (const achievement of unlocked) {
       queue.push({
-        label: `Succès débloqué · ${formatPlayTime(current.unlocked[achievement.id] ?? 0)}`,
+        label: timerVisible
+          ? `Succès débloqué · ${formatPlayTime(current.unlocked[achievement.id] ?? 0)}`
+          : "Succès débloqué",
         name: achievement.name,
         detail: achievement.description,
         complete: false,
@@ -201,11 +233,19 @@ export function bindAchievementsUi(achievements: AchievementTracker): () => void
     }
   });
 
+  const onTimerToggle = (): void => {
+    timerVisible = timerToggle.checked;
+    writeTimerVisible(timerVisible);
+    render(achievements.getSnapshot());
+  };
+
   const unsubscribe = achievements.subscribe(render);
   const clockTimer = setInterval(renderClock, CLOCK_REFRESH);
+  timerToggle.addEventListener("change", onTimerToggle);
 
   return () => {
     unsubscribe();
+    timerToggle.removeEventListener("change", onTimerToggle);
     unsubscribeUnlock();
     clearInterval(clockTimer);
     if (toastTimer !== null) {

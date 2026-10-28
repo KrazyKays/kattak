@@ -53,8 +53,9 @@ mécaniques ou demandent des choix de conception.
   Prestige, Journal) avec pastilles quand une action y est possible. Sur
   téléphone, barre d’onglets en bas et seul le contenu de l’onglet défile.
   Tout nouveau menu doit trouver sa place dans un onglet existant ou nouveau.
-- Succès (28, onglet « Succès ») et chrono de temps de jeu dans l’en-tête,
-  arrêté au 100 % pour le speedrun. Statistiques cumulées (`stats`) dans la
+- Succès (28, onglet « Succès ») et chrono de temps de jeu, arrêté au 100 %
+  pour le speedrun. Le chrono est masqué par défaut et s’affiche via la case
+  « Mode speedrun » de l’onglet Succès ; il mesure le temps même masqué. Statistiques cumulées (`stats`) dans la
   progression, conservées au prestige. Le chrono démarre à la première
   commande et se met en pause quand la page est masquée. Les gains hors ligne
   (priorité 3) devront s’articuler avec ce chrono (ne pas le faire avancer).

@@ -74,7 +74,7 @@ Les défis se valident au moment d’un prestige :
 - **Ascète :** prestige sans avoir invoqué de compagnon pendant la partie.
 - **Forteresse :** prestige sans avoir supprimé de mur pendant la partie.
 
-Le **chrono** (⏱ dans l’en-tête) mesure le temps de jeu depuis la première commande dans l’arène. Il est sauvegardé, se met en pause quand la page est masquée (le jeu l’est aussi) et s’arrête définitivement à 100 % des succès pour afficher le temps final : de quoi tenter des speedruns. « Recommencer de zéro » remet le chrono à zéro.
+Le **chrono** est masqué par défaut : la case « Mode speedrun » de l’onglet Succès l’affiche dans l’en-tête (⏱) et ajoute le temps d’obtention de chaque succès (préférence mémorisée sur l’appareil, clé `kattak:timer`). Il mesure le temps de jeu depuis la première commande dans l’arène. Il est sauvegardé, se met en pause quand la page est masquée (le jeu l’est aussi) et s’arrête définitivement à 100 % des succès pour afficher le temps final : de quoi tenter des speedruns. « Recommencer de zéro » remet le chrono à zéro.
 
 ## Interface
 

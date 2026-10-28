@@ -21,7 +21,7 @@
               <output id="fragment-count" aria-label="Fragments disponibles" aria-live="polite">0</output>
               <span id="fragment-unit">fragments</span>
             </p>
-            <p id="play-time-chip" class="hud-chip hud-timer" title="Temps de jeu">
+            <p id="play-time-chip" class="hud-chip hud-timer" title="Temps de jeu" hidden>
               <span class="hud-timer-icon" aria-hidden="true">⏱</span>
               <output id="play-time" aria-label="Temps de jeu">0:00.0</output>
             </p>
@@ -143,6 +143,10 @@
                 </p>
               </header>
               <div class="achievement-meter" aria-hidden="true"><span id="achievement-meter-fill"></span></div>
+              <label class="timer-toggle">
+                <input id="timer-toggle" type="checkbox" />
+                <span><strong>Mode speedrun</strong> · afficher le chrono</span>
+              </label>
               <p id="achievement-run" class="achievement-run"></p>
               <div id="achievement-list" class="achievement-list"></div>
             </section>
