@@ -26,7 +26,8 @@ function collect(progression: GameProgression, amount: number): void {
 
 function mountPrestigeUi(progression: GameProgression): void {
   document.body.innerHTML = `
-    <aside id="prestige-panel" hidden>
+    <button id="prestige-tab" type="button" hidden></button>
+    <aside id="prestige-panel">
       <output id="crown-count"></output>
       <span id="crown-unit"></span>
       <div><span id="prestige-meter-fill"></span></div>
@@ -45,14 +46,14 @@ afterEach(() => {
 });
 
 describe("prestige UI", () => {
-  it("stays hidden until the first crown is in sight", () => {
+  it("keeps its tab hidden until the first crown is in sight", () => {
     const progression = new GameProgression(() => 0);
     mountPrestigeUi(progression);
-    const panel = document.getElementById("prestige-panel") as HTMLElement;
+    const tab = document.getElementById("prestige-tab") as HTMLElement;
 
-    expect(panel.hidden).toBe(true);
+    expect(tab.hidden).toBe(true);
     collect(progression, getResourcesForCrowns(1));
-    expect(panel.hidden).toBe(false);
+    expect(tab.hidden).toBe(false);
     expect(document.getElementById("prestige-progress")?.textContent).toContain(
       "1 couronne en attente",
     );

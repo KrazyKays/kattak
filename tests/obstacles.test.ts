@@ -288,4 +288,75 @@ describe("moveCircleWithObstacles", () => {
     expect(result.position.x).toBeCloseTo(52, 1);
     expect(result.position.y).toBe(50);
   });
+
+  it("rounds a wall corner smoothly without jittering back and forth", () => {
+    // Le joueur touche le coin haut-gauche et vise l’autre côté du mur.
+    let position = { x: 92, y: 92 };
+    const destination = { x: 260, y: 160 };
+    let previousDistance = Math.hypot(
+      destination.x - position.x,
+      destination.y - position.y,
+    );
+
+    for (let frame = 0; frame < 120; frame += 1) {
+      const result = moveCircleWithObstacles(
+        position,
+        destination,
+        4,
+        radius,
+        walls,
+        bounds,
+      );
+      const distance = Math.hypot(
+        destination.x - result.position.x,
+        destination.y - result.position.y,
+      );
+      expect(distance).toBeLessThanOrEqual(previousDistance + 1e-6);
+      expect(
+        isCircleCollidingWithRect(
+          result.position.x,
+          result.position.y,
+          radius - 1e-6,
+          walls[0],
+        ),
+      ).toBe(false);
+      position = result.position;
+      previousDistance = distance;
+      if (result.reached || result.blocked) {
+        break;
+      }
+    }
+
+    expect(position.x).toBeGreaterThan(200);
+  });
+
+  it("stays still and reports blocked when the destination is straight behind a wall", () => {
+    const current = { x: 150, y: 90 };
+    const result = moveCircleWithObstacles(
+      current,
+      { x: 150, y: 200 },
+      8,
+      radius,
+      walls,
+      bounds,
+    );
+
+    expect(result.blocked).toBe(true);
+    expect(result.reached).toBe(false);
+    expect(result.position).toEqual(current);
+  });
+
+  it("does not tunnel through a thin wall at very high speed", () => {
+    const thinWall = [{ x: 100, y: 0, width: 4, height: 500 }];
+    const result = moveCircleWithObstacles(
+      { x: 80, y: 250 },
+      { x: 300, y: 250 },
+      400,
+      radius,
+      thinWall,
+      bounds,
+    );
+
+    expect(result.position.x).toBeLessThanOrEqual(90 + 1e-6);
+  });
 });

@@ -8,6 +8,7 @@ import { bindPrestigeUi } from "./ui/PrestigeUi";
 import { bindProgressionUi } from "./ui/ProgressionUi";
 import { bindSaveUi } from "./ui/SaveUi";
 import { bindSummonPopupUi } from "./ui/SummonPopupUi";
+import { bindTabsUi } from "./ui/TabsUi";
 import { bindTutorialUi } from "./ui/TutorialUi";
 import "./style.css";
 
@@ -20,6 +21,8 @@ new Phaser.Game(createGameConfig(progression, tutorial));
 bindProgressionUi(progression, tutorial);
 bindActionsUi(progression, tutorial);
 bindPrestigeUi(progression);
+// Après le prestige : la visibilité de son onglet doit déjà être à jour.
+bindTabsUi(progression);
 bindSummonPopupUi(progression);
 bindTutorialUi(tutorial);
 bindSaveUi(bindAutosave(storage, progression, tutorial));

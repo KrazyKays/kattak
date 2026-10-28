@@ -150,7 +150,8 @@ export class StartupScene extends Phaser.Scene {
 
       this.player.setPosition(result.position.x, result.position.y);
 
-      if (result.reached) {
+      // Bloqué contre un mur : on s’arrête net plutôt que de trembler.
+      if (result.reached || result.blocked) {
         this.destination = null;
         this.destinationMarker.setVisible(false);
       }

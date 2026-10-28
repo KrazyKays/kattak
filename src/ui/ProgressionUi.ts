@@ -105,7 +105,7 @@ export function bindProgressionUi(
   const render = (snapshot: ProgressionSnapshot): void => {
     resourceCount.value = String(snapshot.resources);
     resourceUnit.textContent =
-      snapshot.resources === 1 ? "pépite disponible" : "pépites disponibles";
+      snapshot.resources === 1 ? "pépite" : "pépites";
 
     const maxLevel = snapshot.maxCompanionLevel;
     let allMaxed = true;

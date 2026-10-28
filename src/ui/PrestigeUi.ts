@@ -13,7 +13,7 @@ function crownsLabel(count: number): string {
 }
 
 export function bindPrestigeUi(progression: GameProgression): () => void {
-  const panel = document.getElementById("prestige-panel");
+  const tab = document.getElementById("prestige-tab");
   const crownCount = document.getElementById("crown-count");
   const crownUnit = document.getElementById("crown-unit");
   const progress = document.getElementById("prestige-progress");
@@ -22,7 +22,7 @@ export function bindPrestigeUi(progression: GameProgression): () => void {
   const upgradeList = document.getElementById("prestige-upgrades");
 
   if (
-    !(panel instanceof HTMLElement) ||
+    !(tab instanceof HTMLElement) ||
     !(crownCount instanceof HTMLOutputElement) ||
     !(crownUnit instanceof HTMLElement) ||
     !(progress instanceof HTMLElement) ||
@@ -53,15 +53,14 @@ export function bindPrestigeUi(progression: GameProgression): () => void {
     level.className = "prestige-upgrade-level";
     header.append(name, level);
 
-    const description = document.createElement("span");
-    description.className = "prestige-upgrade-description";
-    description.textContent = upgrade.description;
+    // La description complète reste en infobulle pour garder la grille compacte.
+    button.title = upgrade.description;
     const effect = document.createElement("span");
     effect.className = "prestige-upgrade-effect";
     const cost = document.createElement("span");
     cost.className = "prestige-upgrade-cost";
 
-    button.append(header, description, effect, cost);
+    button.append(header, effect, cost);
     item.append(button);
     upgradeList.append(item);
     upgradeEntries.set(upgrade.id, { button, level, effect, cost });
@@ -91,8 +90,8 @@ export function bindPrestigeUi(progression: GameProgression): () => void {
 
   const render = (next: ProgressionSnapshot): void => {
     snapshot = next;
-    // Le panneau apparaît dès la première couronne en vue.
-    panel.hidden =
+    // L’onglet apparaît dès la première couronne en vue.
+    tab.hidden =
       snapshot.prestigeCount === 0 &&
       snapshot.crowns === 0 &&
       snapshot.pendingCrowns === 0;

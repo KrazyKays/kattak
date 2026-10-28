@@ -22,7 +22,7 @@ export function bindActionsUi(
   const render = (snapshot: ProgressionSnapshot): void => {
     fragmentCount.value = String(snapshot.fragments);
     fragmentUnit.textContent =
-      snapshot.fragments > 1 ? "fragments disponibles" : "fragment disponible";
+      snapshot.fragments > 1 ? "fragments" : "fragment";
 
     const cost = snapshot.wallRemovalCost;
     const noWalls = snapshot.wallsRemaining === 0;

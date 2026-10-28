@@ -162,6 +162,16 @@ export function resolveCirclePosition(
   return { x: finalBounded.x, y: finalBounded.y };
 }
 
+/** Au-delà de ce ratio du pas, un déplacement est considéré comme bloqué. */
+const BLOCKED_PROGRESS_RATIO = 0.1;
+
+/**
+ * Avance vers la destination par sous-pas courts, chacun repoussé hors des murs
+ * selon la normale de contact : le cercle glisse le long des faces et contourne
+ * les coins arrondis sans à-coups. Quand le mur annule presque tout le pas
+ * (destination derrière lui), le déplacement est signalé bloqué et la position
+ * reste inchangée pour éviter tout tremblement.
+ */
 export function moveCircleWithObstacles(
   current: { x: number; y: number },
   destination: { x: number; y: number },
@@ -169,82 +179,62 @@ export function moveCircleWithObstacles(
   radius: number,
   obstacles: readonly ObstacleRect[],
   bounds: ArenaBounds,
-): { position: { x: number; y: number }; reached: boolean } {
-  const deltaX = destination.x - current.x;
-  const deltaY = destination.y - current.y;
-  const distance = Math.hypot(deltaX, deltaY);
+): { position: { x: number; y: number }; reached: boolean; blocked: boolean } {
+  const distance = Math.hypot(
+    destination.x - current.x,
+    destination.y - current.y,
+  );
 
   if (distance <= 0.5) {
-    const resolvedDest = resolveCirclePosition(
-      destination.x,
-      destination.y,
+    return {
+      position: resolveCirclePosition(
+        destination.x,
+        destination.y,
+        radius,
+        obstacles,
+        bounds,
+      ),
+      reached: true,
+      blocked: false,
+    };
+  }
+
+  const totalStep = Math.min(step, distance);
+  const subStepCount = Math.max(1, Math.ceil(totalStep / (radius / 2)));
+  const subStep = totalStep / subStepCount;
+  let x = current.x;
+  let y = current.y;
+
+  for (let i = 0; i < subStepCount; i += 1) {
+    const deltaX = destination.x - x;
+    const deltaY = destination.y - y;
+    const remaining = Math.hypot(deltaX, deltaY);
+    if (remaining <= 1e-6) {
+      break;
+    }
+    const advance = Math.min(subStep, remaining);
+    const resolved = resolveCirclePosition(
+      x + (deltaX / remaining) * advance,
+      y + (deltaY / remaining) * advance,
       radius,
       obstacles,
       bounds,
     );
+    x = resolved.x;
+    y = resolved.y;
+  }
+
+  if (Math.hypot(x - current.x, y - current.y) < totalStep * BLOCKED_PROGRESS_RATIO) {
     return {
-      position: resolvedDest,
-      reached: true,
+      position: { x: current.x, y: current.y },
+      reached: false,
+      blocked: true,
     };
   }
 
-  const effectiveStep = Math.min(step, distance);
-  const moveX = (deltaX / distance) * effectiveStep;
-  const moveY = (deltaY / distance) * effectiveStep;
-
-  // 1. Move along X
-  let candX = current.x + moveX;
-  candX = Math.max(bounds.left + radius, Math.min(bounds.right - radius, candX));
-  for (const obstacle of obstacles) {
-    if (isCircleCollidingWithRect(candX, current.y, radius, obstacle)) {
-      if (moveX > 0 && current.x <= obstacle.x) {
-        candX = obstacle.x - radius;
-      } else if (
-        moveX < 0 &&
-        current.x >= obstacle.x + obstacle.width
-      ) {
-        candX = obstacle.x + obstacle.width + radius;
-      } else {
-        candX = current.x;
-      }
-    }
-  }
-
-  // 2. Move along Y from candX
-  let candY = current.y + moveY;
-  candY = Math.max(bounds.top + radius, Math.min(bounds.bottom - radius, candY));
-  for (const obstacle of obstacles) {
-    if (isCircleCollidingWithRect(candX, candY, radius, obstacle)) {
-      if (moveY > 0 && current.y <= obstacle.y) {
-        candY = obstacle.y - radius;
-      } else if (
-        moveY < 0 &&
-        current.y >= obstacle.y + obstacle.height
-      ) {
-        candY = obstacle.y + obstacle.height + radius;
-      } else {
-        candY = current.y;
-      }
-    }
-  }
-
-  // 3. Final safety resolution
-  const finalPos = resolveCirclePosition(
-    candX,
-    candY,
-    radius,
-    obstacles,
-    bounds,
-  );
-
-  const remainingDist = Math.hypot(
-    destination.x - finalPos.x,
-    destination.y - finalPos.y,
-  );
-  const reached = remainingDist <= 1;
-
   return {
-    position: finalPos,
-    reached,
+    position: { x, y },
+    reached: Math.hypot(destination.x - x, destination.y - y) <= 1,
+    blocked: false,
   };
 }

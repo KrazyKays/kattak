@@ -102,11 +102,11 @@ describe("progression UI", () => {
     mountUi(progression);
     const unit = document.getElementById("resource-unit");
 
-    expect(unit?.textContent).toBe("pépites disponibles");
+    expect(unit?.textContent).toBe("pépites");
     progression.collectResource();
-    expect(unit?.textContent).toBe("pépite disponible");
+    expect(unit?.textContent).toBe("pépite");
     progression.collectResource();
-    expect(unit?.textContent).toBe("pépites disponibles");
+    expect(unit?.textContent).toBe("pépites");
   });
 
   it("keeps the history log unchanged on collection and updates it on summon", () => {

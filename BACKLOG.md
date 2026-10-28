@@ -13,10 +13,11 @@ mécaniques ou demandent des choix de conception.
 
 1. **Mur stoppeurs** — Entrer en contact avec un mur stoppe le déplacement du
    joueur, avec un léger repoussement pour ne pas rester collé à la paroi.
-   Point d’attention : le glissement actuel le long des murs et le
-   déplacement en maintenant le pointeur rendent les contournements fluides ;
-   un arrêt net risque de frustrer en glisser continu. À tester derrière une
-   option ou seulement sur certains murs.
+   Point d’attention : le glissement le long des murs et le contournement des
+   coins sont désormais fluides, et le joueur s’arrête déjà net quand la
+   destination est droit derrière un mur (`blocked` dans
+   `moveCircleWithObstacles`). Un arrêt au moindre contact risque de frustrer
+   en glisser continu : à tester derrière une option ou sur certains murs.
 
 2. **Équilibrage du prestige** — Mesurer en jeu la durée d’une première partie
    (cible : 8 à 12 minutes jusqu’à 3 couronnes) et ajuster
@@ -40,6 +41,13 @@ mécaniques ou demandent des choix de conception.
   le niveau 3).
 - Popup d’invocation mettant en avant rareté, nom et niveau.
 - Sauvegarde locale automatique (`localStorage`, clé `kattak:save`).
+- Correction du tremblement contre les coins de mur (déplacement par sous-pas
+  et repoussement selon la normale de contact).
+- Interface sans défilement de page : arène dimensionnée sur la hauteur de
+  l’écran, invocation toujours visible, menus en onglets (Compagnons, Atelier,
+  Prestige, Journal) avec pastilles quand une action y est possible. Sur
+  téléphone, barre d’onglets en bas et seul le contenu de l’onglet défile.
+  Tout nouveau menu doit trouver sa place dans un onglet existant ou nouveau.
 
 ## Format suggéré
 

@@ -12,6 +12,16 @@
       <section class="arena-column" aria-labelledby="game-title">
         <header class="arena-header">
           <h1 id="game-title">KattaK<span>!</span></h1>
+          <div class="hud" aria-label="Butin">
+            <p class="hud-chip hud-resources">
+              <output id="resource-count" aria-label="Pépites disponibles" aria-live="polite">0</output>
+              <span id="resource-unit">pépites</span>
+            </p>
+            <p class="hud-chip hud-fragments">
+              <output id="fragment-count" aria-label="Fragments disponibles" aria-live="polite">0</output>
+              <span id="fragment-unit">fragments</span>
+            </p>
+          </div>
         </header>
         <div class="arena-stage">
           <div id="game" aria-label="Arène interactive"></div>
@@ -33,73 +43,101 @@
         </div>
       </section>
 
-      <aside class="game-panel" aria-label="Ressources et actions">
-        <section class="panel-card" aria-labelledby="resources-title">
-          <h2 id="resources-title">Butin</h2>
-          <p class="resource-total">
-            <output id="resource-count" aria-label="Pépites disponibles" aria-live="polite">0</output>
-            <span id="resource-unit">pépites disponibles</span>
-          </p>
-          <p class="resource-total fragment-total">
-            <output id="fragment-count" aria-label="Fragments disponibles" aria-live="polite">0</output>
-            <span id="fragment-unit">fragments disponibles</span>
-          </p>
-          <p class="panel-placeholder">Ramassez les pépites pour recruter des compagnons.</p>
+      <aside class="side-panel" aria-label="Actions et menus">
+        <section class="panel-card summon-card" aria-label="Invocation">
+          <div class="summon-actions">
+            <button id="summon-button" class="summon-button pepite-action" type="button" disabled>
+              Invoquer 1 fois · 5 pépites
+            </button>
+            <button id="summon-all-button" class="summon-button summon-all-button pepite-action" type="button" disabled>
+              Invoquer tout
+            </button>
+          </div>
+          <p id="summon-preview" class="summon-preview" aria-live="polite"></p>
+          <p id="summon-result" class="summon-result" role="status" aria-live="polite"></p>
         </section>
-        <section class="panel-card companions-card" aria-labelledby="actions-title">
-          <h2 id="actions-title">Compagnons</h2>
-          <details class="summon-chance-help">
-            <summary aria-label="Afficher les probabilités d’invocation" title="Probabilités d’invocation">?</summary>
-            <div class="summon-chance-popover">
-              <strong>Chances d’invocation</strong>
-              <p>Commun : 50 % · Peu commun : 35 % · Rare : 15 %. Les chances sont normalisées et redistribuées quand une rareté est au niveau max.</p>
-              <ul id="companion-chances" aria-live="polite"></ul>
-            </div>
-          </details>
-          <ul id="companion-list" class="companion-list" aria-label="Compagnons"></ul>
-          <p class="companion-hint">Touchez un compagnon pour voir le détail de ses bonus.</p>
-          <p class="panel-placeholder save-note">
-            Partie sauvegardée automatiquement sur cet appareil.
-            <button id="save-reset-button" class="save-reset-button" type="button">Recommencer de zéro</button>
-          </p>
+
+        <section class="panel-card tabs-card">
+          <div class="tab-list" role="tablist" aria-label="Menus">
+            <button id="tab-companions" class="tab" type="button" role="tab" aria-controls="panel-companions" aria-selected="true">
+              <span class="tab-icon" aria-hidden="true">●</span><span class="tab-label">Compagnons</span>
+            </button>
+            <button id="tab-workshop" class="tab" type="button" role="tab" aria-controls="panel-workshop" aria-selected="false" tabindex="-1">
+              <span class="tab-icon" aria-hidden="true">◆</span><span class="tab-label">Atelier</span>
+            </button>
+            <button id="prestige-tab" class="tab" type="button" role="tab" aria-controls="prestige-panel" aria-selected="false" tabindex="-1" hidden>
+              <span class="tab-icon" aria-hidden="true">♛</span><span class="tab-label">Prestige</span>
+            </button>
+            <button id="tab-journal" class="tab" type="button" role="tab" aria-controls="panel-journal" aria-selected="false" tabindex="-1">
+              <span class="tab-icon" aria-hidden="true">≡</span><span class="tab-label">Journal</span>
+            </button>
+          </div>
+
+          <div class="tab-panels">
+            <section id="panel-companions" class="tab-panel companions-panel" role="tabpanel" aria-labelledby="tab-companions">
+              <header class="tab-panel-header">
+                <h2>Compagnons</h2>
+                <details class="summon-chance-help">
+                  <summary aria-label="Afficher les probabilités d’invocation" title="Probabilités d’invocation">?</summary>
+                  <div class="summon-chance-popover">
+                    <strong>Chances d’invocation</strong>
+                    <p>Commun : 50 % · Peu commun : 35 % · Rare : 15 %. Les chances sont normalisées et redistribuées quand une rareté est au niveau max.</p>
+                    <ul id="companion-chances" aria-live="polite"></ul>
+                  </div>
+                </details>
+              </header>
+              <ul id="companion-list" class="companion-list" aria-label="Compagnons"></ul>
+              <p class="companion-hint">Touchez un compagnon pour voir le détail de ses bonus.</p>
+            </section>
+
+            <section id="panel-workshop" class="tab-panel" role="tabpanel" aria-labelledby="tab-workshop" hidden>
+              <header class="tab-panel-header">
+                <h2>Atelier</h2>
+              </header>
+              <p class="panel-placeholder">Dépensez les fragments ramassés dans l’arène.</p>
+              <div class="workshop-actions">
+                <button id="auto-summon-button" class="summon-button auto-summon-button fragment-action" type="button" aria-pressed="false" disabled>
+                  Débloquer l’invocation automatique · 20 fragments
+                </button>
+                <button id="wall-removal-button" class="summon-button fragment-action" type="button" disabled>
+                  Supprimer un mur aléatoire · 10 fragments
+                </button>
+              </div>
+            </section>
+
+            <section id="prestige-panel" class="tab-panel prestige-panel" role="tabpanel" aria-labelledby="prestige-tab" hidden>
+              <header class="tab-panel-header">
+                <h2>Prestige</h2>
+                <p class="crown-total">
+                  <output id="crown-count" aria-label="Couronnes disponibles" aria-live="polite">0</output>
+                  <span id="crown-unit">couronne à dépenser</span>
+                </p>
+                <details class="summon-chance-help">
+                  <summary aria-label="Comment fonctionne le prestige" title="Comment fonctionne le prestige">?</summary>
+                  <div class="summon-chance-popover">
+                    <strong>Prestige</strong>
+                    <p>Recommencez la partie pour convertir vos pépites récoltées en couronnes, puis achetez des talents permanents. Survolez un talent pour lire son détail.</p>
+                  </div>
+                </details>
+              </header>
+              <div class="prestige-meter" aria-hidden="true"><span id="prestige-meter-fill"></span></div>
+              <p id="prestige-progress" class="prestige-progress" aria-live="polite"></p>
+              <button id="prestige-button" class="summon-button prestige-button" type="button" disabled>Prestige</button>
+              <ul id="prestige-upgrades" class="prestige-upgrades" aria-label="Talents de prestige"></ul>
+            </section>
+
+            <section id="panel-journal" class="tab-panel" role="tabpanel" aria-labelledby="tab-journal" hidden>
+              <header class="tab-panel-header">
+                <h2>Journal</h2>
+              </header>
+              <ol id="action-history" class="action-history" role="log" aria-live="polite" aria-relevant="additions"></ol>
+              <p class="panel-placeholder save-note">
+                Partie sauvegardée automatiquement sur cet appareil.
+                <button id="save-reset-button" class="save-reset-button" type="button">Recommencer de zéro</button>
+              </p>
+            </section>
+          </div>
         </section>
-      </aside>
-      <aside class="actions-panel panel-card" aria-labelledby="fragment-actions-title">
-        <h2 id="fragment-actions-title">Actions</h2>
-        <div class="summon-actions">
-          <button id="summon-button" class="summon-button pepite-action" type="button" disabled>
-            Invoquer 1 fois · 5 pépites
-          </button>
-          <button id="summon-all-button" class="summon-button summon-all-button pepite-action" type="button" disabled>
-            Invoquer tout
-          </button>
-          <button id="auto-summon-button" class="summon-button auto-summon-button fragment-action" type="button" aria-pressed="false" disabled>
-            Débloquer l’invocation automatique · 20 fragments
-          </button>
-          <button id="wall-removal-button" class="summon-button fragment-action" type="button" disabled>
-            Supprimer un mur aléatoire · 10 fragments
-          </button>
-        </div>
-        <p id="summon-preview" class="summon-preview" aria-live="polite"></p>
-        <p id="summon-result" class="summon-result" role="status" aria-live="polite"></p>
-      </aside>
-      <aside id="prestige-panel" class="prestige-panel panel-card" aria-labelledby="prestige-title" hidden>
-        <h2 id="prestige-title">Prestige</h2>
-        <p class="resource-total crown-total">
-          <output id="crown-count" aria-label="Couronnes disponibles" aria-live="polite">0</output>
-          <span id="crown-unit">couronne à dépenser</span>
-        </p>
-        <p class="panel-placeholder">
-          Recommencez la partie pour convertir vos pépites récoltées en couronnes, puis achetez des talents permanents.
-        </p>
-        <div class="prestige-meter" aria-hidden="true"><span id="prestige-meter-fill"></span></div>
-        <p id="prestige-progress" class="prestige-progress" aria-live="polite"></p>
-        <button id="prestige-button" class="summon-button prestige-button" type="button" disabled>Prestige</button>
-        <ul id="prestige-upgrades" class="prestige-upgrades" aria-label="Talents de prestige"></ul>
-      </aside>
-      <aside class="history-panel panel-card" aria-labelledby="history-title">
-        <h2 id="history-title">Historique</h2>
-        <ol id="action-history" class="action-history" role="log" aria-live="polite" aria-relevant="additions"></ol>
       </aside>
     </main>
     <script type="module" src="/src/main.ts"></script>
